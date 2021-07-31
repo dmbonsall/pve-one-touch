@@ -1,0 +1,10 @@
+all:
+  children:
+    pve_servers:
+      hosts:
+        # The inventory hostname __must__ be the name PVE uses to refer to that node. The full h
+        # hostname can be specified under `ansible_host`
+        my-pve-node:
+          ansible_host: pve.example.com
+          ansible_user: 'root'
+          ansible_password: 'my-super-secret-password' # ansible-vault is your best-friend :)

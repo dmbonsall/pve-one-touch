@@ -1,0 +1,48 @@
+# General Notes:
+# - Snippets destination below may have to be editted depending on where you want to put it.
+#
+# - The api_user is the SSH username appended with '@pam'. If you are using alternate authentication,
+#   you may have to alter this.
+#
+# - The proxmox_kvm module steps are delegated to localhost since they just use the PVE REST API
+#   (so no need to SSH).
+#
+# - This playbook assumes that your template VM is configured to use cloud-init and that you have
+#   already added a cloud-init drive to the template VM. Due to limitations with the proxmox_kvm
+#   module, you cannot add an IDE drive to a VM via this module.
+---
+- name: Create a new VM based on an image template and a cloud-init configuration.
+  hosts: pve_servers
+  
+  tasks:
+  - name: Copy the template to the pve_host
+    template:
+      src: user-data.j2
+      dest: /snippets/snippets/user-data
+
+  - name: Create the VM
+    community.general.proxmox_kvm:
+      api_host: '{{ ansible_host }}'
+      api_user: '{{ ansible_user }}@pam'
+      api_password: '{{ ansible_password }}'
+      node: '{{ inventory_hostname }}'
+      timeout: 500
+      clone: '{{ template_name }}'
+      name: '{{ vm_name }}'
+      full: yes
+      storage: local-lvm
+    delegate_to: localhost
+   
+  - name: Add the cloudinit and boot parameters
+    community.general.proxmox_kvm:
+      api_host: '{{ ansible_host }}'
+      api_user: '{{ ansible_user }}@pam'
+      api_password: '{{ ansible_password }}'
+      node: '{{ inventory_hostname }}'
+      timeout: 500
+      name: '{{ vm_name }}'
+      boot: cnd
+      bootdisk: scsi0
+      cicustom: 'user=snippets:snippets/user-data'
+      update: yes
+    delegate_to: localhost

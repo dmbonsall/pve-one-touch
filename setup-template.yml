@@ -1,0 +1,63 @@
+# This has been tested on Alma Linux 8
+---
+- name: Setup everything for cloud-init
+  hosts: all
+
+  tasks:
+  - name: Install EPEL-Release
+    dnf:
+      name: epel-release
+      state: present
+    
+  - name: Install cloud-init
+    dnf:
+      name: cloud-init
+      state: present
+
+  - name: Install vim
+    dnf:
+      name: vim
+      state: present
+
+  - name: Install qemu-guest-agent
+    dnf:
+      name: qemu-guest-agent
+      state: present
+
+  - name: Update all packages
+    dnf:
+      name: "*"
+      state: latest
+    
+  - name: Autoremove any unneeded packages
+    dnf:
+      autoremove: yes
+
+  - name: Remove 99-installer.cfg
+    file:
+      path: /etc/cloud/cloud.cfg.d/99-installer.cfg
+      state: absent
+
+  - name: Remove the default users entry in cloud.cfg
+    lineinfile:
+      path: /etc/cloud/cloud.cfg
+      state: absent
+      regexp: '^\s\s?-\sdefault'
+  
+  - name: Add the 99-fake-cloud.cfg file
+    lineinfile:
+      path: /etc/cloud/cloud.cfg.d/99-fake-cloud.cfg
+      line: 'datasource_list: [ "NoCloud", None ]'
+      create: yes
+      owner: root
+      group: root
+      mode: '0644'
+
+  - name: Add the final command to run to finish the install
+    lineinfile:
+      path: /tmp/finish-cloud-init-setup
+      line: "passwd -l root && usermod -p '!' root && cloud-init clean && shutdown now"
+      create: yes
+      owner: root
+      group: root
+      mode: '0700'
