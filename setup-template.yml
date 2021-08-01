@@ -1,14 +1,14 @@
-# This has been tested on Alma Linux 8
+# This has been tested on Alma Linux 8 and Ubuntu 20
 ---
-- name: Setup everything for cloud-init
-  hosts: all
+- name: Install all of the RPM packages for RHEL based distros
+  hosts: rhel_hosts
 
   tasks:
   - name: Install EPEL-Release
     dnf:
       name: epel-release
       state: present
-    
+
   - name: Install cloud-init
     dnf:
       name: cloud-init
@@ -28,10 +28,48 @@
     dnf:
       name: "*"
       state: latest
-    
+
   - name: Autoremove any unneeded packages
     dnf:
       autoremove: yes
+
+- name: Install all of the DEB packages for Debian based distros
+  hosts: debian_hosts
+
+  tasks:
+  - name: Install cloud-init
+    apt:
+      name: cloud-init
+      state: present
+
+  - name: Install vim
+    apt:
+      name: vim
+      state: present
+
+  - name: Install qemu-guest-agent
+    apt:
+      name: qemu-guest-agent
+      state: present
+
+  - name: Update all packages
+    apt:
+      name: "*"
+      state: latest
+
+  - name: Autoremove any unneeded packages
+    apt:
+      autoremove: yes
+
+- name: Setup everything for cloud-init
+  hosts: all
+
+  tasks:
+  - name: Remove the install user, if present
+    user:
+      name: '{{ install_user }}'
+      state: absent
+      remove: yes
 
   - name: Remove 99-installer.cfg
     file:
@@ -43,7 +81,7 @@
       path: /etc/cloud/cloud.cfg
       state: absent
       regexp: '^\s\s?-\sdefault'
-  
+
   - name: Add the 99-fake-cloud.cfg file
     lineinfile:
       path: /etc/cloud/cloud.cfg.d/99-fake-cloud.cfg
