@@ -32,7 +32,12 @@
       full: yes
       storage: local-lvm
     delegate_to: localhost
+    register: clone_output
    
+#  - name: print the clone_output
+#    debug:
+#       var: clone_output
+
   - name: Add the cloudinit and boot parameters
     community.general.proxmox_kvm:
       api_host: '{{ ansible_host }}'
@@ -46,3 +51,46 @@
       cicustom: 'user=snippets:snippets/user-data'
       update: yes
     delegate_to: localhost
+    register: add_output
+
+# - name: print the add_output
+#   debug:
+#       var: add_output
+
+  - name: Start the VM
+    community.general.proxmox_kvm:
+      api_host: '{{ ansible_host }}'
+      api_user: '{{ ansible_user }}@pam'
+      api_password: '{{ ansible_password }}'
+      node: '{{ inventory_hostname }}'
+      name: '{{ vm_name }}'
+      state: started
+    delegate_to: localhost
+    register: start_output
+
+# - name: print the output
+#   debug:
+#       var: start_output
+
+  - name: Wait 60 seconds for the guest VM to come up
+    wait_for:
+      timeout: 60
+    delegate_to: localhost
+
+  - name: Get the IP address of the VM
+    shell: 'qm agent {{ start_output.vmid }} network-get-interfaces'
+    register: agent_output
+
+#  - name: debug
+#    debug:
+#      msg:  '{{ agent_output.stdout }}'
+
+  # NOTE: The query string is a format called "jmespath" which is a handy spec for
+  #       writing JSON queries
+  - name: Print the IPv4 addresses on all interfaces
+    debug:
+      msg: '{{ agent_output.stdout | from_json | json_query(query_string) }}'
+    vars:
+      query_string: "@[*].\"ip-addresses\"[?\"ip-address-type\" == 'ipv4'].\"ip-address\"[]"
+
+# vim: ts=2 sw=2 ai:
